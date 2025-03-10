@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 
-const uri = "mongodb://localhost:27017/real-estate";
+const uri = "mongodb://localhost:27017/real-estate/local";
 const connectDatabase = async() => {
 try {
     const db = await mongoose.connect(uri);
