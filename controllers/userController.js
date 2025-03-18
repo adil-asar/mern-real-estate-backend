@@ -1,13 +1,12 @@
 import User from "../models/userModel.js";
 import bcrypt from "bcryptjs";
-import { signUpSchema } from "../validations/user.js";
+import { signUpSchema, signInSchema } from "../validations/user.js";
+import { generateToken, verifyToken } from "../config/token.js";
 
 export const Signup = async (req, res) => {
   try {
-    // Use safeParse() to validate the request body
     const result = signUpSchema.safeParse(req.body);
     if (!result.success) {
-      // Transform errors into an object keyed by field names
       const errors = result.error.errors.reduce((acc, err) => {
         const field = err.path[0];
         if (!acc[field]) {
@@ -20,19 +19,17 @@ export const Signup = async (req, res) => {
       return res.status(400).json({ errors });
     }
 
-    // Destructure validated data
     const { firstname, lastname, phone, email, password, role } = result.data;
 
-    // Check if user with the same email exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(409).json({ message: "A user with this email already exists" });
+      return res
+        .status(409)
+        .json({ message: "A user with this email already exists" });
     }
 
-    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create the user
     const user = await User.create({
       firstname,
       lastname,
@@ -42,7 +39,6 @@ export const Signup = async (req, res) => {
       role,
     });
 
-    // Prepare a response object without the password
     const userResponse = {
       _id: user._id,
       firstname: user.firstname,
@@ -54,18 +50,71 @@ export const Signup = async (req, res) => {
       updatedAt: user.updatedAt,
     };
 
-    res.status(201).json({ message: "User registered successfully", user: userResponse });
+    res.status(200).json({
+      message: "User registered successfully",
+      user: userResponse,
+    });
   } catch (error) {
     console.error("Error during signup:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+};
+
+export const Signin = async (req, res) => {
+  try {
+    const validationResult = signInSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      const formattedErrors = validationResult.error.errors.reduce(
+        (acc, err) => {
+          acc[err.path[0]] = err.message;
+          return acc;
+        },
+        {}
+      );
+      return res.status(400).json({ errors: formattedErrors });
+    }
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ error: "Invalid email " });
+    }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: "Invalid password" });
+    }
+    const token = generateToken(user);
+    res.status(200).json({
+      user_Token: token,
+    });
+  } catch (error) {
+    console.error("Signin error:", error);
+    res
+      .status(500)
+      .json({ error: "Something went wrong. Please try again later." });
   }
 };
 
 
+export const ValidateUser = async (req, res) => {
+ 
+  const userId = req.user.id;
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
 
-export const Signin = async (req, res) => {
-    res.send("Signin api is available");
+
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.status(200).json({ user: user, message: "User validated successfully" });
+  }catch (error) {
+    console.error("Validation error:", error);
+    res.status(500).json({ error: "Something went wrong. Please try again later." });
+  }
 
 }
-
-
