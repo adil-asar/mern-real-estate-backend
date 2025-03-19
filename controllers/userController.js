@@ -96,25 +96,23 @@ export const Signin = async (req, res) => {
   }
 };
 
-
 export const ValidateUser = async (req, res) => {
- 
   const userId = req.user.id;
   if (!userId) {
     return res.status(401).json({ error: "Unauthorized" });
   }
-
-
-
   try {
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-    res.status(200).json({ user: user, message: "User validated successfully" });
-  }catch (error) {
+    res
+      .status(200)
+      .json({ user: user, message: "User validated successfully" });
+  } catch (error) {
     console.error("Validation error:", error);
-    res.status(500).json({ error: "Something went wrong. Please try again later." });
+    res
+      .status(500)
+      .json({ error: "Something went wrong. Please try again later." });
   }
-
-}
+};
