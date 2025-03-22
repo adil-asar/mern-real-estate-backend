@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 
-const propertyValidationSchema = z.object({
+ export const propertyValidationSchema = z.object({
     name: z.string().min(3, "Property name must be at least 3 characters long"),
     beds: z.number("Beds must be a number"),
     baths: z.number("Baths must be a number"),
@@ -13,3 +13,4 @@ const propertyValidationSchema = z.object({
     description: z.string().optional(), // Optional description
     images: z.array(z.string().url("Invalid image URL")).min(1, "At least one image is required"), // Required array of image URLs
   });
+
