@@ -4,10 +4,13 @@ import cors from "cors";
 import connectDatabase from "./config/database.js";
 import userRoute from "./routes/userRoute.js";
 import propertyRoute from "./routes/propertyRoute.js";
+import ExpressFormidable from "express-formidable";
 dotenv.config();
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })
+);
 app.use(cors());
 connectDatabase();
 app.get("/", (req, res) => {
@@ -15,7 +18,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/users", userRoute);
-app.use("/api/properties",propertyRoute );
+app.use("/properties",propertyRoute );
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
