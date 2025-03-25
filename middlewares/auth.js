@@ -1,7 +1,7 @@
 import { verifyToken } from "../config/token.js";
 
 export const authenticateUser = (req, res, next) => {
-  console.log("🛡️ Auth middleware triggered");
+
   try {
     const user_token = req.headers["authorization"];
     const token = user_token && user_token.split(" ")[1];
