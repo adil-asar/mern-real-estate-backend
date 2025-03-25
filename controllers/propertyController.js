@@ -40,7 +40,7 @@ export const CreateProperty = async (req, res) => {
     const savedProperty = await newProperty.save();
 
     console.log("✅ Property saved:", savedProperty._id);
-    res.status(201).json({
+    res.status(200).json({
       message: "Property created successfully",
       property: savedProperty,
     });
@@ -54,14 +54,12 @@ export const CreateProperty = async (req, res) => {
 
 export const GetAllProperties = async (req, res) => {
   const role = req.user.role;
-  console.log("role", role);
+
   if (role !== "admin") {
     return res.status(401).json({ error: "You are not authorized" });
   }
 
   try {
-    console.log("📦 GetAllProperties called");
-
     const properties = await Property.aggregate([
       {
         $lookup: {
@@ -100,12 +98,10 @@ export const GetAllProperties = async (req, res) => {
     ]);
 
     res.status(200).json({
-      success: true,
-      count: properties.length,
       properties,
     });
   } catch (error) {
-    console.error("❌ Error in GetAllProperties:", error);
+    console.error("Error in GetAllProperties:", error);
     res.status(500).json({ error: "Failed to fetch properties" });
   }
 };
