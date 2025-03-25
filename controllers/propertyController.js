@@ -39,7 +39,6 @@ export const CreateProperty = async (req, res) => {
     const newProperty = new Property(propertyData);
     const savedProperty = await newProperty.save();
 
-    console.log("✅ Property saved:", savedProperty._id);
     res.status(200).json({
       message: "Property created successfully",
       property: savedProperty,
@@ -59,8 +58,15 @@ export const GetAllProperties = async (req, res) => {
     return res.status(401).json({ error: "You are not authorized" });
   }
 
+  const page = parseFloat(req.query.page) || 1;
+  const limit = 6;
+  const skip = (page - 1) * limit;
+
   try {
     const properties = await Property.aggregate([
+      {$sort: {createdAt: -1}},
+      {$skip: skip},
+      {$limit: limit},
       {
         $lookup: {
           from: "users",
@@ -96,9 +102,12 @@ export const GetAllProperties = async (req, res) => {
         },
       },
     ]);
+    const totalItems = await Property.countDocuments();
 
     res.status(200).json({
+      totalItems,
       properties,
+      
     });
   } catch (error) {
     console.error("Error in GetAllProperties:", error);
