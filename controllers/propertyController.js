@@ -62,11 +62,37 @@ export const GetAllProperties = async (req, res) => {
   const limit = 6;
   const skip = (page - 1) * limit;
 
+  // Extract filters from query
+  const {
+    beds,
+    baths,
+    price,
+    size,
+    city,
+    features,
+  } = req.query;
+
+  // Create a dynamic filter object
+  const filterConditions = {};
+
+  if (beds) filterConditions.beds = parseInt(beds);
+  if (baths) filterConditions.baths = parseInt(baths);
+  if (price) filterConditions.price = parseInt(price);
+  if (size) filterConditions.size = parseInt(size);
+  if (city) filterConditions.city = city;
+  if (features) {
+    const featureArray = Array.isArray(features)
+      ? features
+      : features.split(',');
+    filterConditions.features = { $all: featureArray };
+  }
+
   try {
     const properties = await Property.aggregate([
-      {$sort: {createdAt: -1}},
-      {$skip: skip},
-      {$limit: limit},
+      { $match: filterConditions },
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: limit },
       {
         $lookup: {
           from: "users",
@@ -75,9 +101,7 @@ export const GetAllProperties = async (req, res) => {
           as: "Owner",
         },
       },
-      {
-        $unwind: "$Owner",
-      },
+      { $unwind: "$Owner" },
       {
         $project: {
           name: 1,
@@ -102,15 +126,19 @@ export const GetAllProperties = async (req, res) => {
         },
       },
     ]);
-    const totalItems = await Property.countDocuments();
+
+    const totalItems = await Property.countDocuments(filterConditions);
 
     res.status(200).json({
       totalItems,
+      currentPage: page,
+      totalPages: Math.ceil(totalItems / limit),
       properties,
-      
     });
   } catch (error) {
     console.error("Error in GetAllProperties:", error);
     res.status(500).json({ error: "Failed to fetch properties" });
   }
 };
+
+ 
