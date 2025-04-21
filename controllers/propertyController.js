@@ -32,7 +32,6 @@ export const CreateProperty = async (req, res) => {
     const parsed = propertyValidationSchema.safeParse(propertyData);
 
     if (!parsed.success) {
-      jjhjjj;
       console.error(" Validation failed:", parsed.error.flatten());
       return res.status(400).json({ error: parsed.error.flatten() });
     }
@@ -62,7 +61,6 @@ export const GetAllProperties = async (req, res) => {
   const limit = 6;
   const skip = (page - 1) * limit;
 
-  // Extract filters from query
   const {
     beds,
     baths,
@@ -72,24 +70,28 @@ export const GetAllProperties = async (req, res) => {
     features,
   } = req.query;
 
-  // Create a dynamic filter object
-  const filterConditions = {};
+ 
+  const conditions = [];
 
-  if (beds) filterConditions.beds = parseInt(beds);
-  if (baths) filterConditions.baths = parseInt(baths);
-  if (price) filterConditions.price = parseInt(price);
-  if (size) filterConditions.size = parseInt(size);
-  if (city) filterConditions.city = city;
+  if (beds) conditions.push({ beds: parseInt(beds) });
+  if (baths) conditions.push({ baths: parseInt(baths) });
+  if (price) conditions.push({ price: parseInt(price) });
+  if (size) conditions.push({ size: parseInt(size) });
+  if (city) conditions.push({ city });
   if (features) {
     const featureArray = Array.isArray(features)
       ? features
       : features.split(',');
-    filterConditions.features = { $all: featureArray };
+    conditions.push({ features: { $all: featureArray } });
   }
+  
+  
+  const matchStage = conditions.length > 0 ? { $or: conditions } : {};
+  
 
   try {
     const properties = await Property.aggregate([
-      { $match: filterConditions },
+      { $match: matchStage },
       { $sort: { createdAt: -1 } },
       { $skip: skip },
       { $limit: limit },
@@ -127,7 +129,7 @@ export const GetAllProperties = async (req, res) => {
       },
     ]);
 
-    const totalItems = await Property.countDocuments(filterConditions);
+    const totalItems = await Property.countDocuments(matchStage);
 
     res.status(200).json({
       totalItems,
