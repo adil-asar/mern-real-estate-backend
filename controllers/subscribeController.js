@@ -25,7 +25,7 @@ export const subscribeToNewsletter = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ Error subscribing to newsletter:", error);
+    console.error(" Error subscribing to newsletter:", error);
     res.status(500).json({
       error: "Something went wrong while subscribing. Please try again later.",
     });
@@ -37,7 +37,6 @@ export const getSubscribedUsers = async (req, res) => {
   const limit = 10;
   const skip = (page - 1) * limit;
   const search = req.query.search || "";
-
   try {
     const matchStage = {
       email: { $regex: search, $options: "i" },
@@ -66,7 +65,7 @@ export const getSubscribedUsers = async (req, res) => {
       subscribers,
     });
   } catch (error) {
-    console.error("❌ Error in getSubscribedUsers:", error);
+    console.error(" Error in getSubscribedUsers:", error);
     res.status(500).json({
       error: "Failed to fetch subscribers. Please try again later.",
     });
@@ -74,26 +73,28 @@ export const getSubscribedUsers = async (req, res) => {
 };
 
 export const deleteSubscribedUsers = async (req, res) => {
-    const { role } = req.user;
-    const { id } = req.params;
-  
-    if (role !== "admin") {
-      return res.status(403).json({ error: "Access denied. Only admin can delete subscribers." });
+  const { role } = req.user;
+  const { id } = req.params;
+
+  if (role !== "admin") {
+    return res
+      .status(403)
+      .json({ error: "Access denied. Only admin can delete subscribers." });
+  }
+
+  try {
+    const deletedSubscriber = await Subscriber.findByIdAndDelete(id);
+
+    if (!deletedSubscriber) {
+      return res.status(404).json({ error: "Subscriber not found." });
     }
-  
-    try {
-      const deletedSubscriber = await Subscriber.findByIdAndDelete(id);
-  
-      if (!deletedSubscriber) {
-        return res.status(404).json({ error: "Subscriber not found." });
-      }
-  
-      res.status(200).json({
-        message: "Subscriber deleted successfully.",
-        subscriber: deletedSubscriber,
-      });
-    } catch (error) {
-      console.error("❌ Error deleting subscriber:", error);
-      res.status(500).json({ error: "Failed to delete subscriber." });
-    }
-  };
+
+    res.status(200).json({
+      message: "Subscriber deleted successfully.",
+      subscriber: deletedSubscriber,
+    });
+  } catch (error) {
+    console.error(" Error deleting subscriber:", error);
+    res.status(500).json({ error: "Failed to delete subscriber." });
+  }
+};
