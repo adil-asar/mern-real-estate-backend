@@ -79,7 +79,7 @@ export const deleteSubscribedUsers = async (req, res) => {
   if (role !== "admin") {
     return res
       .status(403)
-      .json({ error: "Access denied. Only admin can delete subscribers." });
+      .json({ error: "Access denied. " });
   }
 
   try {
