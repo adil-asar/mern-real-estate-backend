@@ -1,5 +1,5 @@
 import express from 'express';
-import { CreateProperty , GetAllProperties } from '../controllers/propertyController.js';
+import { CreateProperty , GetAllProperties ,deleteProperty} from '../controllers/propertyController.js';
 import { authenticateUser} from '../middlewares/auth.js';
 import upload from '../middlewares/multer.js';
 
@@ -20,6 +20,8 @@ router.get(
   authenticateUser,  
   GetAllProperties
 );
+
+router.delete("/delete/:id",authenticateUser,deleteProperty)
 
 
 

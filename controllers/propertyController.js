@@ -1,3 +1,4 @@
+
 import Property from "../models/propertyModel.js";
 import { propertyValidationSchema } from "../validations/property.js";
 
@@ -55,10 +56,9 @@ export const GetAllProperties = async (req, res) => {
   if (role !== "admin") {
     return res.status(401).json({ error: "You are not authorized" });
   }
-  const page = parseFloat(req.query.page) || 1;
-  const limit = 6;
-  const skip = (page - 1) * limit;
+
   const {
+    page: pageQuery,
     beds,
     baths,
     price,
@@ -66,6 +66,7 @@ export const GetAllProperties = async (req, res) => {
     city,
     features,
   } = req.query;
+
   const conditions = [];
   if (beds) conditions.push({ beds: parseInt(beds) });
   if (baths) conditions.push({ baths: parseInt(baths) });
@@ -78,13 +79,25 @@ export const GetAllProperties = async (req, res) => {
       : features.split(',');
     conditions.push({ features: { $all: featureArray } });
   }
+
   const matchStage = conditions.length > 0 ? { $or: conditions } : {};
+  const isFilterApplied = conditions.length > 0;
+
+  const page = parseFloat(pageQuery) || 1;
+  const limit = 6;
+  const skip = (page - 1) * limit;
+
   try {
-    const properties = await Property.aggregate([
+    const pipeline = [
       { $match: matchStage },
       { $sort: { createdAt: -1 } },
-      { $skip: skip },
-      { $limit: limit },
+    ];
+
+    if (!isFilterApplied) {
+      pipeline.push({ $skip: skip }, { $limit: limit });
+    }
+
+    pipeline.push(
       {
         $lookup: {
           from: "users",
@@ -116,13 +129,16 @@ export const GetAllProperties = async (req, res) => {
             phone: 1,
           },
         },
-      },
-    ]);
+      }
+    );
+
+    const properties = await Property.aggregate(pipeline);
     const totalItems = await Property.countDocuments(matchStage);
+
     res.status(200).json({
       totalItems,
-      currentPage: page,
-      totalPages: Math.ceil(totalItems / limit),
+      currentPage: isFilterApplied ? 1 : page,
+      totalPages: isFilterApplied ? 1 : Math.ceil(totalItems / limit),
       properties,
     });
   } catch (error) {
@@ -131,4 +147,24 @@ export const GetAllProperties = async (req, res) => {
   }
 };
 
- 
+export const deleteProperty = async (req,res) => {
+  const {role} = req.user;
+  const {id} = req.params;
+  if (role !== "admin") {
+    return res.status(403).json({error:"Access denied"})
+  }
+
+  try {
+    const deleteProperties = await Property.findByIdAndDelete(id);
+    if (!deleteProperties) {
+      return res.status(404).json({error:"Property not found"})
+    }
+    return res.status(200).json({
+      message:"Property deleted successfully.",
+      deletedItem:deleteProperties
+    })
+  } catch (error) {
+    console.error("Error in deleting properties",error),
+    res.status(500).json({error:"Failed to delete property"})
+  }
+}
