@@ -43,7 +43,7 @@ export const CreateProperty = async (req, res) => {
       property: savedProperty,
     });
   } catch (error) {
-    console.error("🔥 Error in CreateProperty:", error);
+    console.error(" Error in CreateProperty:", error);
     res
       .status(500)
       .json({ error: "Internal Server Error", details: error.message });
@@ -52,15 +52,12 @@ export const CreateProperty = async (req, res) => {
 
 export const GetAllProperties = async (req, res) => {
   const role = req.user.role;
-
   if (role !== "admin") {
     return res.status(401).json({ error: "You are not authorized" });
   }
-
   const page = parseFloat(req.query.page) || 1;
   const limit = 6;
   const skip = (page - 1) * limit;
-
   const {
     beds,
     baths,
@@ -69,10 +66,7 @@ export const GetAllProperties = async (req, res) => {
     city,
     features,
   } = req.query;
-
- 
   const conditions = [];
-
   if (beds) conditions.push({ beds: parseInt(beds) });
   if (baths) conditions.push({ baths: parseInt(baths) });
   if (price) conditions.push({ price: parseInt(price) });
@@ -84,11 +78,7 @@ export const GetAllProperties = async (req, res) => {
       : features.split(',');
     conditions.push({ features: { $all: featureArray } });
   }
-  
-  
   const matchStage = conditions.length > 0 ? { $or: conditions } : {};
-  
-
   try {
     const properties = await Property.aggregate([
       { $match: matchStage },
@@ -128,9 +118,7 @@ export const GetAllProperties = async (req, res) => {
         },
       },
     ]);
-
     const totalItems = await Property.countDocuments(matchStage);
-
     res.status(200).json({
       totalItems,
       currentPage: page,

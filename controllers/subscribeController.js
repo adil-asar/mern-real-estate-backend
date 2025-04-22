@@ -37,58 +37,63 @@ export const getSubscribedUsers = async (req, res) => {
   const limit = 10;
   const skip = (page - 1) * limit;
   const search = req.query.search || "";
-  try {
-    const matchStage = {
-      email: { $regex: search, $options: "i" },
-    };
+  const isSearch = !!search.trim();
 
-    const subscribers = await Subscriber.aggregate([
-      { $match: matchStage },
-      { $sort: { createdAt: -1 } },
-      { $skip: skip },
-      { $limit: limit },
-      {
-        $project: {
-          _id: 1,
-          email: 1,
-          createdAt: 1,
-        },
-      },
-    ]);
+  try {
+    const matchStage = isSearch
+      ? { email: { $regex: search, $options: "i" } }
+      : {};
 
     const totalSubscribers = await Subscriber.countDocuments(matchStage);
 
+    // Build the pipeline
+    const pipeline = [
+      { $match: matchStage },
+      { $sort: { createdAt: -1 } },
+    ];
+
+    if (!isSearch) {
+      pipeline.push({ $skip: skip }, { $limit: limit });
+    }
+
+    pipeline.push({
+      $project: {
+        _id: 1,
+        email: 1,
+        createdAt: 1,
+      },
+    });
+
+    const subscribers = await Subscriber.aggregate(pipeline);
+
     res.status(200).json({
       total: totalSubscribers,
-      page,
-      totalPages: Math.ceil(totalSubscribers / limit),
+      page: isSearch ? 1 : page,
+      totalPages: isSearch ? 1 : Math.ceil(totalSubscribers / limit),
       subscribers,
     });
   } catch (error) {
-    console.error(" Error in getSubscribedUsers:", error);
+    console.error("Error in getSubscribedUsers:", error);
     res.status(500).json({
       error: "Failed to fetch subscribers. Please try again later.",
     });
   }
 };
 
+
 export const deleteSubscribedUsers = async (req, res) => {
   const { role } = req.user;
   const { id } = req.params;
-
   if (role !== "admin") {
     return res
       .status(403)
       .json({ error: "Access denied. " });
   }
-
   try {
     const deletedSubscriber = await Subscriber.findByIdAndDelete(id);
-
     if (!deletedSubscriber) {
       return res.status(404).json({ error: "Subscriber not found." });
     }
-
     res.status(200).json({
       message: "Subscriber deleted successfully.",
       subscriber: deletedSubscriber,
