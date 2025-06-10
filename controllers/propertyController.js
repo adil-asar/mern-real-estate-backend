@@ -1,6 +1,6 @@
-
 import Property from "../models/propertyModel.js";
 import { propertyValidationSchema } from "../validations/property.js";
+import City from "../models/cityModal.js"; 
 
 export const CreateProperty = async (req, res) => {
   try {
@@ -19,7 +19,7 @@ export const CreateProperty = async (req, res) => {
       baths: Number(req.body.baths),
       price: Number(req.body.price),
       size: Number(req.body.size),
-      city: req.body.city,
+      city: req.body.city, // Should be city ObjectId string
       address: req.body.address,
       description: req.body.description || "",
       features: req.body.features
@@ -29,13 +29,22 @@ export const CreateProperty = async (req, res) => {
         : [],
       images: uploadedImages,
       addedBy: userId,
+      category: req.body.category, // New field
     };
-    const parsed = propertyValidationSchema.safeParse(propertyData);
 
+    // Validate input data using Zod
+    const parsed = propertyValidationSchema.safeParse(propertyData);
     if (!parsed.success) {
-      console.error(" Validation failed:", parsed.error.flatten());
+      console.error("Validation failed:", parsed.error.flatten());
       return res.status(400).json({ error: parsed.error.flatten() });
     }
+
+    // Ensure the city exists in the City collection
+    const cityExists = await City.findById(propertyData.city);
+    if (!cityExists) {
+      return res.status(400).json({ error: "Invalid city ID: city not found" });
+    }
+
     const newProperty = new Property(propertyData);
     const savedProperty = await newProperty.save();
 
@@ -44,10 +53,8 @@ export const CreateProperty = async (req, res) => {
       property: savedProperty,
     });
   } catch (error) {
-    console.error(" Error in CreateProperty:", error);
-    res
-      .status(500)
-      .json({ error: "Internal Server Error", details: error.message });
+    console.error("Error in CreateProperty:", error);
+    res.status(500).json({ error: "Internal Server Error", details: error.message });
   }
 };
 
@@ -76,7 +83,7 @@ export const GetAllProperties = async (req, res) => {
   if (features) {
     const featureArray = Array.isArray(features)
       ? features
-      : features.split(',');
+      : features.split(",");
     conditions.push({ features: { $all: featureArray } });
   }
 
@@ -88,10 +95,7 @@ export const GetAllProperties = async (req, res) => {
   const skip = (page - 1) * limit;
 
   try {
-    const pipeline = [
-      { $match: matchStage },
-      { $sort: { createdAt: -1 } },
-    ];
+    const pipeline = [{ $match: matchStage }, { $sort: { createdAt: -1 } }];
 
     if (!isFilterApplied) {
       pipeline.push({ $skip: skip }, { $limit: limit });
@@ -107,6 +111,15 @@ export const GetAllProperties = async (req, res) => {
         },
       },
       { $unwind: "$Owner" },
+       {
+    $lookup: {
+      from: "cities",
+      localField: "city",
+      foreignField: "_id",
+      as: "city",
+    },
+  },
+  { $unwind: "$city" },
       {
         $project: {
           name: 1,
@@ -114,10 +127,11 @@ export const GetAllProperties = async (req, res) => {
           baths: 1,
           price: 1,
           size: 1,
-          city: 1,
+          city: { name: 1 },
           address: 1,
           description: 1,
           features: 1,
+          category: 1,
           images: 1,
           createdAt: 1,
           updatedAt: 1,
@@ -147,24 +161,24 @@ export const GetAllProperties = async (req, res) => {
   }
 };
 
-export const deleteProperty = async (req,res) => {
-  const {role} = req.user;
-  const {id} = req.params;
+export const deleteProperty = async (req, res) => {
+  const { role } = req.user;
+  const { id } = req.params;
   if (role !== "admin") {
-    return res.status(403).json({error:"Access denied"})
+    return res.status(403).json({ error: "Access denied" });
   }
 
   try {
     const deleteProperties = await Property.findByIdAndDelete(id);
     if (!deleteProperties) {
-      return res.status(404).json({error:"Property not found"})
+      return res.status(404).json({ error: "Property not found" });
     }
     return res.status(200).json({
-      message:"Property deleted successfully.",
-      deletedItem:deleteProperties
-    })
+      message: "Property deleted successfully.",
+      deletedItem: deleteProperties,
+    });
   } catch (error) {
-    console.error("Error in deleting properties",error),
-    res.status(500).json({error:"Failed to delete property"})
+    console.error("Error in deleting properties", error),
+      res.status(500).json({ error: "Failed to delete property" });
   }
-}
+};

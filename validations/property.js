@@ -1,16 +1,20 @@
 import { z } from "zod";
 
+export const propertyValidationSchema = z.object({
+  name: z.string().min(3, "Property name must be at least 3 characters long"),
+  beds: z.number().min(0, "Beds must be a non-negative number"),
+  baths: z.number().min(0, "Baths must be a non-negative number"),
+  price: z.number().min(0, "Price must be a non-negative number"),
+  size: z.number().min(0, "Size must be a non-negative number"),
+  city: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid city ID"),
+  address: z.string().min(5, "Address must be at least 5 characters long"),
+  features: z.array(z.string()).optional(),
+  description: z.string().min(10, "Description must be at least 10 characters long"),
 
- export const propertyValidationSchema = z.object({
-    name: z.string().min(3, "Property name must be at least 3 characters long"),
-    beds: z.number("Beds must be a number"),
-    baths: z.number("Baths must be a number"),
-    price: z.number("Price must be a number"),
-    size: z.number("Size must be a number"), // Square feet
-    city: z.string().min(2, "City name must be at least 2 characters long"),
-    address: z.string().min(5, "Address must be at least 5 characters long"),
-    features: z.array(z.string()).optional(), // Array of strings (optional)
-    description: z.string().optional(), // Optional description
-    images: z.array(z.string().url("Invalid image URL")).min(1, "At least one image is required"), // Required array of image URLs
-  });
+  images: z.array(z.string().url("Invalid image URL")).min(1, "At least one image is required"),
 
+  category: z.enum(["sale", "rent"], {
+    required_error: "Category is required",
+    invalid_type_error: "Category must be either 'sale' or 'rent'",
+  }),
+});

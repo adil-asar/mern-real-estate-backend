@@ -6,6 +6,7 @@ import userRoute from "./routes/userRoute.js";
 import propertyRoute from "./routes/propertyRoute.js";
 import subscriberRoute from "./routes/subscribeRoute.js";
 import contactRoute from "./routes/contactRoute.js";
+import cityRoute from "./routes/cityRoutes.js";
 dotenv.config();
 
 const app = express();
@@ -22,6 +23,6 @@ app.use("/api/users", userRoute);
 app.use("/properties",propertyRoute );
 app.use("/subscribers", subscriberRoute);
 app.use("/contacts", contactRoute);
-
+app.use("/cities", cityRoute);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
